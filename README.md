@@ -13,3 +13,5 @@ A játék egy 3D-s FPS játék lesz ami a Primeval világából merít ihletet.
 - teljes vércsoport szimuláció implementálása
 
 
+## Credits
+- "Rexy v2 made by lukiethewesely13" (https://skfb.ly/pA6zR) by jimmyho905 is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
