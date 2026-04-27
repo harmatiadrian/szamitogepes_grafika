@@ -66,6 +66,8 @@ void init_opengl()
 
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
+
+    //glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 }
 
 void reshape(GLsizei width, GLsizei height)

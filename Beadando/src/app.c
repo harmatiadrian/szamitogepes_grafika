@@ -93,7 +93,7 @@ void reshape(GLsizei width, GLsizei height)
     glFrustum(
         -.08, .08,
         -.06, .06,
-        .1, 10
+        .1, 100
     );
 }
 
@@ -168,15 +168,16 @@ void handle_app_events(App* app)
 
 void update_app(App* app)
 {
-    double current_time;
-    double elapsed_time;
-
-    current_time = (double)SDL_GetTicks() / 1000;
-    elapsed_time = current_time - app->uptime;
+    double current_time = (double)SDL_GetTicks() / 1000;
+    double elapsed_time = current_time - app->uptime;
     app->uptime = current_time;
 
     update_camera(&(app->camera), elapsed_time);
-    update_scene(&(app->scene));
+    
+    // Frissítjük az összes entitást a játékos helyzete alapján
+    for (int i = 0; i < app->scene.entity_count; i++) {
+        // Itt hívhatod meg az AI logikát minden egységre
+    }
 }
 
 void render_app(App* app)

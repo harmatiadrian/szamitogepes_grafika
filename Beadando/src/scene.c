@@ -5,34 +5,29 @@
 
 void init_scene(Scene* scene)
 {
-    // load_model(&(scene->cube), "assets/models/cube.obj");
-    // scene->texture_id = load_texture("assets/textures/cube.png");
-    load_model(&(scene->cube), "assets/models/cat.obj");
-    //scene->texture_id = load_texture("assets/textures/cube.png");
+    scene->entity_count = 0;
 
-    glBindTexture(GL_TEXTURE_2D, scene->texture_id);
+    // Rexy hozzáadása
+    Entity* rexy = &(scene->entities[scene->entity_count++]);
+    load_model(&(rexy->model), "assets/models/Trex.obj");
+    rexy->texture_id = load_texture("assets/textures/Rexy_Diffuse.png");
+    rexy->position = (vec3){10.0, 10.0, 0.0};
+    rexy->speed = 2.5;
+    rexy->is_active = true;
 
-    scene->material.ambient.red = 0.0;
-    scene->material.ambient.green = 0.0;
-    scene->material.ambient.blue = 0.0;
-
-    scene->material.diffuse.red = 1.0;
-    scene->material.diffuse.green = 1.0;
-    scene->material.diffuse.blue = 0.0;
-
-    scene->material.specular.red = 0.0;
-    scene->material.specular.green = 0.0;
-    scene->material.specular.blue = 0.0;
-
+    // Alapértelmezett anyagtulajdonságok
+    scene->material.ambient = (Color){1.0, 1.0, 1.0};
+    scene->material.diffuse = (Color){1.0, 1.0, 1.0};
+    scene->material.specular = (Color){0.0, 0.0, 0.0};
     scene->material.shininess = 0.0;
 }
 
 void set_lighting()
 {
-    float ambient_light[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    float ambient_light[] = { 0.3f, 0.3f, 0.3f, 1.0f };
     float diffuse_light[] = { 1.0f, 1.0f, 1.0, 1.0f };
     float specular_light[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-    float position[] = { 0.0f, 0.0f, 10.0f, 1.0f };
+    float position[] = { 50.0f, 50.0f, 80.0f, 0.0f };
 
     glLightfv(GL_LIGHT0, GL_AMBIENT, ambient_light);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse_light);
@@ -73,11 +68,13 @@ void update_scene(Scene* scene)
 
 void render_scene(const Scene* scene)
 {
-    set_material(&(scene->material));
+    set_material(&(Animal->material));
     set_lighting();
     draw_origin();
+    draw_floor();
     //glTranslatef(2,2,1.5); // athelyezes
-    draw_model(&(scene->cube));
+    draw_model(&(Animal->model));
+    
 }
 
 void draw_origin()
@@ -135,4 +132,20 @@ void draw_origin()
     }
     */
     glEnd();
+}
+void draw_floor() {
+    //glDisable(GL_LIGHTING); // A padló ne legyen árnyékos, hogy mindig lásd az irányokat
+    glBegin(GL_QUADS);
+    
+    // Adjunk neki egy sötétszürke színt
+    glColor3f(0.2f, 0.2f, 0.2f); 
+    
+    // A sarkok koordinátái: -50-től 50-ig az 100 méter szélességet ad ki
+    glVertex3f(-50.0f, -50.0f, 0.0f);
+    glVertex3f( 50.0f, -50.0f, 0.0f);
+    glVertex3f( 50.0f,  50.0f, 0.0f);
+    glVertex3f(-50.0f,  50.0f, 0.0f);
+    
+    glEnd();
+    //glEnable(GL_LIGHTING);
 }
