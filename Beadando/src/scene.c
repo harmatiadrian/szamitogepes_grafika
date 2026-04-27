@@ -1,19 +1,26 @@
 #include "scene.h"
-
+#include <GL/gl.h>
+//#include <GL/glu.h>
 #include <obj/load.h>
 #include <obj/draw.h>
+#include <math.h>
+
 
 void init_scene(Scene* scene)
 {
-    scene->entity_count = 0;
+    scene->animal_count = 1;
+    
 
     // Rexy hozzáadása
-    Entity* rexy = &(scene->entities[scene->entity_count++]);
-    load_model(&(rexy->model), "assets/models/Trex.obj");
-    rexy->texture_id = load_texture("assets/textures/Rexy_Diffuse.png");
-    rexy->position = (vec3){10.0, 10.0, 0.0};
-    rexy->speed = 2.5;
-    rexy->is_active = true;
+    //Animal* rexy = &(scene->animals[scene->animal_count++]);
+    load_model(&(scene->animals[0].model), "assets/models/Trex.obj");
+    scene->animals[0].texture_id = load_texture("assets/textures/Rexy_Diffuse.png");
+    scene->animals[0].position.x = 2.0;
+    scene->animals[0].position.y = 2.0;
+    scene->animals[0].position.z = 0.0;
+    scene->animals[0].speed = .5;
+    //rexy->is_active = true;
+    scene->animals[0].is_sleeping = false;
 
     // Alapértelmezett anyagtulajdonságok
     scene->material.ambient = (Color){1.0, 1.0, 1.0};
@@ -62,77 +69,79 @@ void set_material(const Material* material)
     glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, &(material->shininess));
 }
 
-void update_scene(Scene* scene)
+void update_scene(Scene* scene, vec3 camera_pos, double elapsed_time)
 {
+    for (int i = 0; i < scene->animal_count; i++)
+    {
+        Animal* animal = &(scene->animals[i]);
+
+        if (animal->is_sleeping)
+        {
+            continue;
+        }
+
+        double dx = camera_pos.x - animal->position.x;
+        double dy = camera_pos.y - animal->position.y;
+        double distance = sqrt(dx*dx + dy*dy);
+
+        if(distance > 1.5)
+        {
+            animal->position.x += (dx / distance)*animal->speed * elapsed_time;
+            animal->position.y += (dy / distance)*animal->speed * elapsed_time;
+        }
+        
+    }
+    
 }
 
 void render_scene(const Scene* scene)
 {
-    set_material(&(Animal->material));
+    set_material(&(scene->animals[0].material));
     set_lighting();
     draw_origin();
     draw_floor();
     //glTranslatef(2,2,1.5); // athelyezes
-    draw_model(&(Animal->model));
+    //draw_model(&(scene->animals[0].model));
+
+    
+    for (int i = 0; i < scene->animal_count; i++)
+    {
+        printf("dinoKord: %f,%f,%f\n",scene->animals[i].position.x,scene->animals[i].position.y,scene->animals[i].position.z);
+        const Animal* animal = &(scene->animals[i]);
+
+        glPushMatrix();
+            glTranslatef(animal->position.x, animal->position.y, animal->position.z);
+
+            glBindTexture(GL_TEXTURE_2D, animal->texture_id);
+            draw_model(&(animal->model));
+        glPopMatrix();
+    }
+    
     
 }
 
 void draw_origin()
 {
+    glEnable(GL_COLOR_MATERIAL);
     glBegin(GL_LINES);
 
     glColor3f(1, 0, 0);
     glVertex3f(0, 0, 0);
-    glVertex3f(4, 0, 0);
-
-    // 4X4 
-    /*
-    for (size_t i = 1; i < 4; i++)
-    {
-        for (size_t j = 1; j < 4; j++)
-        {
-            glColor3f(1, 0, 0);
-            glVertex3f(0, i, j);
-            glVertex3f(4, i, j);
-        }
-    }
-    */
+    glVertex3f(1, 0, 0);
 
     glColor3f(0, 1, 0);
     glVertex3f(0, 0, 0);
-    glVertex3f(0, 4, 0);
-
-    //4x4
-    /*
-    for (size_t i = 1; i < 4; i++)
-    {
-        for (size_t j = 1; j < 4; j++)
-        {
-            glColor3f(1, 0, 0);
-            glVertex3f(i, 0, j);
-            glVertex3f(i, 4, j);
-        }
-    }
-    */
+    glVertex3f(0, 1, 0);
 
     glColor3f(0, 0, 1);
     glVertex3f(0, 0, 0);
-    glVertex3f(0, 0, 4);
+    glVertex3f(0, 0, 1);
 
-    //4x4
-    /*
-    for (size_t i = 1; i < 4; i++)
-    {
-        for (size_t j = 1; j < 4; j++)
-        {
-            glColor3f(1, 0, 0);
-            glVertex3f(i, j, 0);
-            glVertex3f(i, j, 4);
-        }
-    }
-    */
+    glColor3f(1, 1, 1);
     glEnd();
+    glDisable(GL_COLOR_MATERIAL);
 }
+
 void draw_floor() {
     //glDisable(GL_LIGHTING); // A padló ne legyen árnyékos, hogy mindig lásd az irányokat
     glBegin(GL_QUADS);

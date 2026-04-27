@@ -8,31 +8,36 @@
 
 #define MAX_ENTITIES 10
 
-typedef struct Scene
-{
-    Entity entities[MAX_ENTITIES];
-    int entity_count;
-    Material material; // Globális anyagbeállításokhoz
-} Scene;
-
+/*
 typedef struct {
     Model model;
     Material material;
-    GLuint texture_id;
-    vec3 position;
-    float speed;
-    float alertness; // Mennyire veszi észre a játékost
-    bool is_sleeping; // Altatás állapota
-} Animal;
-
-typedef struct {
-    Model model;
     GLuint texture_id;
     vec3 position;
     float rotation_z;
     float speed;
     bool is_active;
 } Entity;
+*/
+typedef struct {
+    Model model;
+    Material material;
+    GLuint texture_id;
+    vec3 position;
+    float rotation_z;
+    float speed;
+    float alertness; // Mennyire veszi észre a játékost
+    bool is_sleeping; // Altatás állapota
+} Animal;
+
+typedef struct Scene
+{
+    Animal animals[MAX_ENTITIES];
+    int animal_count;
+    Material material; // Globális anyagbeállításokhoz
+} Scene;
+
+
 
 /**
  * Initialize the scene by loading models.
@@ -52,7 +57,7 @@ void set_material(const Material* material);
 /**
  * Update the scene.
  */
-void update_scene(Scene* scene);
+void update_scene(Scene* scene, vec3 camera_pos, double elapsed_time);
 
 /**
  * Render the scene objects.

@@ -1,11 +1,13 @@
 #include "app.h"
 
 #include <SDL2/SDL_image.h>
+#include <stdio.h>
 
 void init_app(App* app, int width, int height)
 {
     int error_code;
     int inited_loaders;
+    app->uptime = 0;
 
     app->is_running = false;
 
@@ -175,9 +177,7 @@ void update_app(App* app)
     update_camera(&(app->camera), elapsed_time);
     
     // Frissítjük az összes entitást a játékos helyzete alapján
-    for (int i = 0; i < app->scene.entity_count; i++) {
-        // Itt hívhatod meg az AI logikát minden egységre
-    }
+    update_scene(&(app->scene), app->camera.position, elapsed_time);
 }
 
 void render_app(App* app)
@@ -185,10 +185,10 @@ void render_app(App* app)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
 
-    glPushMatrix();
+    //glPushMatrix();
     set_view(&(app->camera));
     render_scene(&(app->scene));
-    glPopMatrix();
+    //glPopMatrix();
 
     if (app->camera.is_preview_visible) {
         show_texture_preview();
