@@ -28,13 +28,32 @@ typedef struct {
     float speed;
     float alertness; // Mennyire veszi észre a játékost
     bool is_sleeping; // Altatás állapota
+    float distance_from_player;
+    float turn_speed;
+    float attak_distance;
+    float attak_damige;
 } Animal;
+
+typedef struct scene
+{
+    /*
+    Model model;
+    Material material;
+    GLuint texture_id;
+    */
+    vec3 position;
+    float rotation_z;
+    float speed;
+    float hp;
+} Player;
+
 
 typedef struct Scene
 {
     Animal animals[MAX_ENTITIES];
     int animal_count;
     Material material; // Globális anyagbeállításokhoz
+    Player Player;
 } Scene;
 
 

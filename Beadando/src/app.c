@@ -116,16 +116,16 @@ void handle_app_events(App* app)
                 app->is_running = false;
                 break;
             case SDL_SCANCODE_W:
-                set_camera_speed(&(app->camera), 1);
+                set_camera_speed(&(app->camera), app->scene.Player.speed);
                 break;
             case SDL_SCANCODE_S:
-                set_camera_speed(&(app->camera), -1);
+                set_camera_speed(&(app->camera), -(app->scene.Player.speed));
                 break;
             case SDL_SCANCODE_A:
-                set_camera_side_speed(&(app->camera), 1);
+                set_camera_side_speed(&(app->camera), app->scene.Player.speed);
                 break;
             case SDL_SCANCODE_D:
-                set_camera_side_speed(&(app->camera), -1);
+                set_camera_side_speed(&(app->camera), -(app->scene.Player.speed));
                 break;
             default:
                 break;

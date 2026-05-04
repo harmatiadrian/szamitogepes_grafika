@@ -10,17 +10,35 @@ void init_scene(Scene* scene)
 {
     scene->animal_count = 1;
     
-
+    //printf("animal betolt:\n");
     // Rexy hozzáadása
     //Animal* rexy = &(scene->animals[scene->animal_count++]);
     load_model(&(scene->animals[0].model), "assets/models/Trex.obj");
+    //printf("animal model ready\n");
     scene->animals[0].texture_id = load_texture("assets/textures/Rexy_Diffuse.png");
-    scene->animals[0].position.x = 2.0;
-    scene->animals[0].position.y = 2.0;
+    //printf("animal texture ready\n");
+    scene->animals[0].position.x = 10.0;
+    scene->animals[0].position.y = 10.0;
     scene->animals[0].position.z = 0.0;
-    scene->animals[0].speed = .5;
+    scene->animals[0].rotation_z = 0.0;
+    //printf("animal position and rotation ready\n");
+    scene->animals[0].speed = 1.0f;
+    //printf("animal speed set\n");
+    scene->animals[0].turn_speed = 1.0f;
+    //printf("animal turn_speed set\n");
     //rexy->is_active = true;
     scene->animals[0].is_sleeping = false;
+    scene->animals[0].attak_distance = 8.0f;
+    scene->animals[0].attak_damige = .05f;
+    //printf("animal is awake\n");
+
+    scene->Player.position.x = 0;
+    scene->Player.position.y = 0;
+    scene->Player.position.z = 0;
+
+    scene->Player.rotation_z = 0.0f;
+    scene->Player.hp = 1.0f;
+    scene->Player.speed = 1.5f;
 
     // Alapértelmezett anyagtulajdonságok
     scene->material.ambient = (Color){1.0, 1.0, 1.0};
@@ -83,14 +101,44 @@ void update_scene(Scene* scene, vec3 camera_pos, double elapsed_time)
         double dx = camera_pos.x - animal->position.x;
         double dy = camera_pos.y - animal->position.y;
         double distance = sqrt(dx*dx + dy*dy);
+        animal->distance_from_player = distance;
 
-        if(distance > 1.5)
+        if(animal->distance_from_player > animal->attak_distance)
         {
             animal->position.x += (dx / distance)*animal->speed * elapsed_time;
             animal->position.y += (dy / distance)*animal->speed * elapsed_time;
+
+            float target_angle = atan2(dy,dx) * 180.0 / M_PI -90.0f;
+
+            float angle_diff = target_angle - animal->rotation_z;
+            
+            
+            while (angle_diff < -180)
+            {
+                angle_diff += 360;
+            }
+
+            while (angle_diff > 180)
+            {
+                angle_diff -= 360;
+            }
+            
+            //printf("target_angle: %f; angle_diff: %f \n",target_angle,angle_diff);
+            animal->rotation_z += angle_diff * animal->turn_speed * elapsed_time;
+        }
+
+        if (animal->distance_from_player <= animal->attak_distance)
+        {
+            scene->Player.hp -= animal->attak_damige * elapsed_time;
+            //scene->Player.hp -= 5.0 * elapsed_time;
+            printf("player hp: %f \n",(scene->Player.hp) *100);
         }
         
+        
     }
+    scene->Player.position.x = camera_pos.x;
+    scene->Player.position.y = camera_pos.y;
+    scene->Player.position.z = camera_pos.z;
     
 }
 
@@ -106,11 +154,13 @@ void render_scene(const Scene* scene)
     
     for (int i = 0; i < scene->animal_count; i++)
     {
-        printf("dinoKord: %f,%f,%f\n",scene->animals[i].position.x,scene->animals[i].position.y,scene->animals[i].position.z);
+        //printf("dinoKord: %f,%f,%f; tavolsag: %f\n",scene->animals[i].position.x,scene->animals[i].position.y,scene->animals[i].position.z, scene->animals[i].distance_from_player);
         const Animal* animal = &(scene->animals[i]);
 
         glPushMatrix();
             glTranslatef(animal->position.x, animal->position.y, animal->position.z);
+
+            glRotatef(animal->rotation_z, 0.0f, 0.0f, 1.0f);
 
             glBindTexture(GL_TEXTURE_2D, animal->texture_id);
             draw_model(&(animal->model));
