@@ -2,11 +2,11 @@
 
 #include <SDL2/SDL_image.h>
 #include <stdio.h>
-
+/*
 #define ROCK_OFFSET_X (-3.85f)
 #define ROCK_OFFSET_Y (2.55f)
 #define TREX_OFFSET_Y (5.5f)
-
+*/
 void init_app(App* app, int width, int height)
 {
     int error_code;
@@ -210,10 +210,10 @@ void update_app(App* app)
         Entity* rock = &(app->scene.entities[i]);
 
         // Szikla határai
-        float b_min_x = rock->position.x + ROCK_OFFSET_X - ROCK_HALF_X;
-        float b_max_x = rock->position.x + ROCK_OFFSET_X + ROCK_HALF_X;
-        float b_min_y = rock->position.y + ROCK_OFFSET_Y - ROCK_HALF_Y;
-        float b_max_y = rock->position.y + ROCK_OFFSET_Y + ROCK_HALF_Y;
+        float b_min_x = rock->position.x - ROCK_HALF_X;
+        float b_max_x = rock->position.x + ROCK_HALF_X;
+        float b_min_y = rock->position.y - ROCK_HALF_Y;
+        float b_max_y = rock->position.y + ROCK_HALF_Y;
 
         // Legközelebbi pont a sziklán a játékoshoz
         float closest_x = clamp_double(app->camera.position.x, b_min_x, b_max_x);

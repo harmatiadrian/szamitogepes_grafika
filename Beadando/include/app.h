@@ -13,8 +13,8 @@
 
 #define PLAYER_RADIUS 0.5f
 
-#define ROCK_HALF_X 2.23f
-#define ROCK_HALF_Y 1.33f
+#define ROCK_HALF_Y (4.0f)
+#define ROCK_HALF_X (3.0f)
 
 typedef struct App
 {

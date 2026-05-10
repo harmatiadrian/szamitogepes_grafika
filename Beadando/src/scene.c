@@ -16,17 +16,17 @@
 
 // Szikla (Long Boulder) fél-kiterjedései a mért adatok alapján
 #define ROCK_HALF_Y (4.0f)  // (4.46 / 2)
-#define ROCK_HALF_X (4.0f)  // (2.67 / 2)
+#define ROCK_HALF_X (3.0f)  // (2.67 / 2)
 
 // T-Rex ütköző gömbjének sugara (a szélessége alapján)
 #define TREX_RADIUS (1.1f)
 
 #define PLAYER_RADIUS (0.5f)
-
+/*
 #define ROCK_OFFSET_X (-3.85f)
 #define ROCK_OFFSET_Y (2.55f)
 #define TREX_OFFSET_Y (5.5f)
-
+*/
 static double random_between(double min, double max)
 {
 #if defined(_WIN32) || defined(_WIN64)
@@ -180,10 +180,10 @@ void update_scene(Scene* scene, vec3 camera_pos, double elapsed_time)
             for (int j = 0; j < scene->entity_count; j++) {
                 Entity* rock = &(scene->entities[j]);
                 
-                float b_min_x = rock->position.x + ROCK_OFFSET_X - ROCK_HALF_X;
-                float b_max_x = rock->position.x + ROCK_OFFSET_X + ROCK_HALF_X;
-                float b_min_y = rock->position.y + ROCK_OFFSET_Y - ROCK_HALF_Y;
-                float b_max_y = rock->position.y + ROCK_OFFSET_Y + ROCK_HALF_Y;
+                float b_min_x = rock->position.x - ROCK_HALF_X;
+                float b_max_x = rock->position.x + ROCK_HALF_X;
+                float b_min_y = rock->position.y - ROCK_HALF_Y;
+                float b_max_y = rock->position.y + ROCK_HALF_Y;
 
                 float closest_x = clamp_double(next_x, b_min_x, b_max_x);
                 float closest_y = clamp_double(next_y, b_min_y, b_max_y);
@@ -300,8 +300,8 @@ void render_scene(const Scene* scene)
     glColor3f(0.0f, 1.0f, 0.0f); // Zöld szín a sziklákhoz
     for (int i = 0; i < scene->entity_count; i++) {
         vec3 visual_pos = {
-            scene->entities[i].position.x + ROCK_OFFSET_X,
-            scene->entities[i].position.y + ROCK_OFFSET_Y,
+            scene->entities[i].position.x,
+            scene->entities[i].position.y,
             scene->entities[i].position.z
         };
         draw_wire_box(visual_pos, ROCK_HALF_X, ROCK_HALF_Y);
