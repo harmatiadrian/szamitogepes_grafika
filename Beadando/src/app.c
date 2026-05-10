@@ -3,6 +3,10 @@
 #include <SDL2/SDL_image.h>
 #include <stdio.h>
 
+#define ROCK_OFFSET_X (-3.85f)
+#define ROCK_OFFSET_Y (2.55f)
+#define TREX_OFFSET_Y (5.5f)
+
 void init_app(App* app, int width, int height)
 {
     int error_code;
@@ -18,7 +22,7 @@ void init_app(App* app, int width, int height)
     }
 
     app->window = SDL_CreateWindow(
-        "Cube!",
+        "Primeval Project",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         width, height,
         SDL_WINDOW_OPENGL);
@@ -99,6 +103,13 @@ void reshape(GLsizei width, GLsizei height)
     );
 }
 
+static double clamp_double(double value, double min, double max)
+{
+    if (value < min) return min;
+    if (value > max) return max;
+    return value;
+}
+
 void handle_app_events(App* app)
 {
     SDL_Event event;
@@ -127,6 +138,15 @@ void handle_app_events(App* app)
             case SDL_SCANCODE_D:
                 set_camera_side_speed(&(app->camera), -(app->scene.Player.speed));
                 break;
+            case SDL_SCANCODE_LSHIFT:
+                if (app->scene.Player.stamina > 0) 
+                {
+                    app->scene.Player.speed = app->scene.Player.speed * 2;
+                    app->scene.Player.is_running = true;
+                }
+                break;
+            case SDL_SCANCODE_SPACE:
+                sleep_nerby_creatures(&(app->scene));
             default:
                 break;
             }
@@ -140,6 +160,10 @@ void handle_app_events(App* app)
             case SDL_SCANCODE_A:
             case SDL_SCANCODE_D:
                 set_camera_side_speed(&(app->camera), 0);
+                break;
+            case SDL_SCANCODE_LSHIFT:
+                app->scene.Player.speed = app->scene.Player.base_speed;
+                app->scene.Player.is_running = false;
                 break;
             default:
                 break;
@@ -174,8 +198,60 @@ void update_app(App* app)
     double elapsed_time = current_time - app->uptime;
     app->uptime = current_time;
 
+    // 1. Mentjük el, hol voltunk, mielőtt elmozdultunk
+    vec3 old_pos = app->camera.position;
+
+    // 2. A kamera kiszámolja az új pozíciót az input (W,A,S,D) alapján
     update_camera(&(app->camera), elapsed_time);
-    
+
+    // 3. Ütközésvizsgálat a sziklákkal
+    bool player_hit = false;
+    for (int i = 0; i < app->scene.entity_count; i++) {
+        Entity* rock = &(app->scene.entities[i]);
+
+        // Szikla határai
+        float b_min_x = rock->position.x + ROCK_OFFSET_X - ROCK_HALF_X;
+        float b_max_x = rock->position.x + ROCK_OFFSET_X + ROCK_HALF_X;
+        float b_min_y = rock->position.y + ROCK_OFFSET_Y - ROCK_HALF_Y;
+        float b_max_y = rock->position.y + ROCK_OFFSET_Y + ROCK_HALF_Y;
+
+        // Legközelebbi pont a sziklán a játékoshoz
+        float closest_x = clamp_double(app->camera.position.x, b_min_x, b_max_x);
+        float closest_y = clamp_double(app->camera.position.y, b_min_y, b_max_y);
+
+        float dist_x = app->camera.position.x - closest_x;
+        float dist_y = app->camera.position.y - closest_y;
+        float dist_sq = (dist_x * dist_x) + (dist_y * dist_y);
+
+        if (dist_sq < (PLAYER_RADIUS * PLAYER_RADIUS)) {
+            player_hit = true;
+            break;
+        }
+    }
+
+    // 4. Ha ütköztünk, rakjuk vissza a játékost a régi helyére
+    if (player_hit) {
+        app->camera.position = old_pos;
+    }
+
+    for (int i = 0; i < app->scene.animal_count; i++) {
+        Animal* animal = &(app->scene.animals[i]);
+        
+        // Kiszámoljuk a távolságot a játékos és a dínó között
+        float dx = app->camera.position.x - animal->position.x;
+        float dy = app->camera.position.y - animal->position.y;
+        float dist_sq = dx*dx + dy*dy;
+
+        // Ha túl közel vagyunk (pl. 2.0 egység), nem engedjük tovább a játékost
+        float min_dist = 2.0f; 
+        if (dist_sq < (min_dist * min_dist)) {
+            app->camera.position = old_pos; // Visszaugrik a régi helyre
+        }
+    }
+
+    app->camera.position.x = clamp_double(app->camera.position.x, -50.0, 50.0);
+    app->camera.position.y = clamp_double(app->camera.position.y, -50.0, 50.0);
+
     // Frissítjük az összes entitást a játékos helyzete alapján
     update_scene(&(app->scene), app->camera.position, elapsed_time);
 }

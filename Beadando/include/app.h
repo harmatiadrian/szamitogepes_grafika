@@ -11,6 +11,11 @@
 #define VIEWPORT_RATIO (4.0 / 3.0)
 #define VIEWPORT_ASPECT 50.0
 
+#define PLAYER_RADIUS 0.5f
+
+#define ROCK_HALF_X 2.23f
+#define ROCK_HALF_Y 1.33f
+
 typedef struct App
 {
     SDL_Window* window;
