@@ -5,9 +5,9 @@
 #else
     #include <time.h>
 #endif
+
 #include "scene.h"
 #include <GL/gl.h>
-//#include <GL/glu.h>
 #include <obj/load.h>
 #include <obj/draw.h>
 #include <math.h>
