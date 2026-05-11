@@ -21,7 +21,7 @@ GLuint load_texture(char* filename, bool is_RGBA)
     glBindTexture(GL_TEXTURE_2D, texture_name);
     if (is_RGBA)
     {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, (Pixel*)(surface->pixels));
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGB, GL_UNSIGNED_BYTE, (Pixel*)(surface->pixels));
     }
     else
     {

@@ -342,7 +342,9 @@ void draw_origin()
     glDisable(GL_COLOR_MATERIAL);
 }
 
-void draw_floor() {
+void draw_floor() 
+{
+    glDisable(GL_LIGHTING);
     glBegin(GL_QUADS);
     
     glColor3f(0.45f, 0.33f, 0.18f);
@@ -352,7 +354,10 @@ void draw_floor() {
     glVertex3f( 50.0f,  50.0f, 0.0f);
     glVertex3f(-50.0f,  50.0f, 0.0f);
     
+
     glEnd();
+    glColor3f(1.0f,1.0f,1.0f);
+    glBegin(GL_LIGHTING);
 }
 
 void sleep_nerby_creatures(Scene* scene)
@@ -464,6 +469,8 @@ void render_anomaly(const Anomaly* anomaly)
 
     
     glDisable(GL_BLEND);
+    glBindTexture(GL_TEXTURE_2D,0);
+    glDisable(GL_TEXTURE_2D);
     glEnable(GL_LIGHTING);
 
     glPopMatrix();
