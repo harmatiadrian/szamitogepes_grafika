@@ -14,36 +14,30 @@
 #include <stdlib.h>
 #include <limits.h>
 
-// Szikla (Long Boulder) fél-kiterjedései a mért adatok alapján
-#define ROCK_HALF_Y (4.0f)  // (4.46 / 2)
-#define ROCK_HALF_X (3.0f)  // (2.67 / 2)
+#define ROCK_HALF_Y (4.0f)
+#define ROCK_HALF_X (3.0f)
 
-// T-Rex ütköző gömbjének sugara (a szélessége alapján)
 #define TREX_RADIUS (1.1f)
 
 #define PLAYER_RADIUS (0.5f)
-/*
-#define ROCK_OFFSET_X (-3.85f)
-#define ROCK_OFFSET_Y (2.55f)
-#define TREX_OFFSET_Y (5.5f)
-*/
+
 static double random_between(double min, double max)
 {
-#if defined(_WIN32) || defined(_WIN64)
-    unsigned int value;
-    if (rand_s(&value) != 0) {
-        value = 0;
-    }
-    return min + (double)value / (double)UINT_MAX * (max - min);
-#elif defined(__linux__)
-    unsigned int value = 0;
-    if (getrandom(&value, sizeof(value), 0) != (ssize_t)sizeof(value)) {
-        value = (unsigned int)time(NULL);
-    }
-    return min + (double)value / (double)UINT_MAX * (max - min);
-#else
-    return min + (double)rand() / (double)RAND_MAX * (max - min);
-#endif
+    #if defined(_WIN32) || defined(_WIN64)
+        unsigned int value;
+        if (rand_s(&value) != 0) {
+            value = 0;
+        }
+        return min + (double)value / (double)UINT_MAX * (max - min);
+    #elif defined(__linux__)
+        unsigned int value = 0;
+        if (getrandom(&value, sizeof(value), 0) != (ssize_t)sizeof(value)) {
+            value = (unsigned int)time(NULL);
+        }
+        return min + (double)value / (double)UINT_MAX * (max - min);
+    #else
+        return min + (double)rand() / (double)RAND_MAX * (max - min);
+    #endif
 }
 
 void init_scene(Scene* scene)
@@ -52,14 +46,14 @@ void init_scene(Scene* scene)
     scene->anomaly_count = 1;
     scene->entity_count = 2;
 
-#if !defined(_WIN32) && !defined(_WIN64) && !defined(__linux__)
-    srand((unsigned)time(NULL));
-#endif
+    #if !defined(_WIN32) && !defined(_WIN64) && !defined(__linux__)
+        srand((unsigned)time(NULL));
+    #endif
 
     load_model(&(scene->animals[0].model), "assets/models/Trex.obj");
     load_model(&(scene->entities[0].model), "assets/models/Long Boulder.obj");
     load_model(&(scene->entities[1].model), "assets/models/Long Boulder.obj");
-    scene->animals[0].texture_id = load_texture("assets/textures/Rexy_Diffuse.png");
+    scene->animals[0].texture_id = load_texture("assets/textures/Rexy_Diffuse.png",false);
     scene->animals[0].position.x = 10.0;
     scene->animals[0].position.y = 10.0;
     scene->animals[0].position.z = 0.0;
@@ -78,14 +72,19 @@ void init_scene(Scene* scene)
     scene->entities[0].position.y = random_between(-40.0, 40.0);
     scene->entities[0].position.z = -0.4f;
     scene->entities[0].rotation_z = 0.0f;
-    scene->entities[0].texture_id = load_texture("assets/textures/Long Boulder.png");
+    scene->entities[0].texture_id = load_texture("assets/textures/Long Boulder.png",false);
 
     scene->entities[1].position.x = random_between(-40.0, 40.0);
     scene->entities[1].position.y = random_between(-40.0, 40.0);
     scene->entities[1].position.z = -0.4f;
     scene->entities[1].rotation_z = 0.0f;
-    scene->entities[1].texture_id = load_texture("assets/textures/Long Boulder.png");
-
+    scene->entities[1].texture_id = load_texture("assets/textures/Long Boulder.png",false);
+    
+    scene->anomalies[0].position.x = random_between(-40.0, 40.0);
+    scene->anomalies[0].position.y = random_between(-40.0, 40.0);
+    scene->anomalies[0].position.z = 1.8f;
+    scene->anomalies[0].texture_id = load_texture("assets/textures/anomaly.png",true);
+    
     scene->Player.position.x = 0;
     scene->Player.position.y = 0;
     scene->Player.position.z = 0;
@@ -152,30 +151,32 @@ void set_material(const Material* material)
 
 void update_scene(Scene* scene, vec3 camera_pos, double elapsed_time)
 {
-    // Szikla méretek a modell alapján
-    /*
-    const float ROCK_HALF_X = (2.23f);
-    const float ROCK_HALF_Y = (1.33f);
-    const float TREX_RADIUS = (1.1f);
-    */
+
     for (int i = 0; i < scene->animal_count; i++)
     {
         Animal* animal = &(scene->animals[i]);
-        if (animal->is_sleeping) continue;
+        if (animal->sleeping_time < 0)
+        {
+            animal->is_sleeping = false;
+            animal->sleeping_time = 0;
+        }
+        if (animal->is_sleeping)
+        {
+            animal->sleeping_time -= 1.0f * elapsed_time;
+            //printf("sleep: %f \n",animal->sleeping_time);
+            continue;
+        } 
 
         double dx = camera_pos.x - animal->position.x;
         double dy = camera_pos.y - animal->position.y;
         double distance = sqrt(dx*dx + dy*dy);
         animal->distance_from_player = distance;
 
-        // 1. TÁVOLSÁG ALAPÚ MOZGÁS ÉS ÜTKÖZÉS
-        // Csak akkor mozog, ha nincs túl közel a játékoshoz (ütközés a játékossal)
-        if (animal->distance_from_player > 1.5f && distance > 1e-6)
+        if (animal->distance_from_player > 7.0f && distance > 1e-6)
         {
             float next_x = animal->position.x + (dx / distance) * animal->speed * elapsed_time;
             float next_y = animal->position.y + (dy / distance) * animal->speed * elapsed_time;
 
-            // Ütközésvizsgálat a sziklákkal
             bool collision = false;
             for (int j = 0; j < scene->entity_count; j++) {
                 Entity* rock = &(scene->entities[j]);
@@ -203,7 +204,6 @@ void update_scene(Scene* scene, vec3 camera_pos, double elapsed_time)
             }
         }
 
-        // 2. FORGATÁS JAVÍTÁSA
         float target_angle = atan2(dy, dx) * 180.0 / M_PI - 90.0f;
         float angle_diff = target_angle - animal->rotation_z;
         while (angle_diff < -180) angle_diff += 360;
@@ -212,8 +212,14 @@ void update_scene(Scene* scene, vec3 camera_pos, double elapsed_time)
 
         if (animal->distance_from_player <= animal->attak_distance)
         {
-            scene->Player.hp -= animal->attak_damige * elapsed_time;
-            //scene->Player.hp -= 5.0 * elapsed_time;
+            if (scene->Player.hp > 0)
+            {
+                scene->Player.hp -= animal->attak_damige * elapsed_time;
+            }
+            else
+            {
+                scene->Player.hp = 0;
+            }
             printf("player hp: %f \n",(scene->Player.hp) *100);
         }
         //animal->stamina -= 0.1f * elapsed_time;
@@ -249,8 +255,7 @@ void render_scene(const Scene* scene)
     set_lighting();
     draw_origin();
     draw_floor();
-    //glTranslatef(2,2,1.5); // athelyezes
-    //draw_model(&(scene->animals[0].model));
+
     int i;
     
     for (i = 0; i < scene->animal_count; i++)
@@ -281,23 +286,23 @@ void render_scene(const Scene* scene)
             draw_model(&(entity->model));
         glPopMatrix();
     }
+    
+    for (i = 0; i < scene->anomaly_count; i++)
+    {
+        render_anomaly(&(scene->anomalies[i]));
+    }
+    
 
     glDisable(GL_LIGHTING);
     glDisable(GL_TEXTURE_2D);
-    glLineWidth(2.0f); // Vastagabb vonalak
+    glLineWidth(2.0f); 
 
-    // 1. Rajzoljuk ki a T-Rex gömbjét
-    // (Jelenleg egy gömbként kezeljük a kódban, bár a 3-as lánc jobb lenne)
-    //const float TREX_RADIUS = 1.1f;
-    glColor3f(1.0f, 0.0f, 0.0f); // Piros szín a dínóhoz
+    glColor3f(1.0f, 0.0f, 0.0f); 
     for (int i = 0; i < scene->animal_count; i++) {
         draw_wire_sphere(scene->animals[i].position, TREX_RADIUS);
     }
 
-    // 2. Rajzoljuk ki a sziklák dobozait
-    //const float ROCK_HALF_X = 2.23f;
-    //const float ROCK_HALF_Y = 1.33f;
-    glColor3f(0.0f, 1.0f, 0.0f); // Zöld szín a sziklákhoz
+    glColor3f(0.0f, 1.0f, 0.0f); 
     for (int i = 0; i < scene->entity_count; i++) {
         vec3 visual_pos = {
             scene->entities[i].position.x,
@@ -307,12 +312,9 @@ void render_scene(const Scene* scene)
         draw_wire_box(visual_pos, ROCK_HALF_X, ROCK_HALF_Y);
     }
     
-    // 3. Rajzoljuk ki a Játékos gömbjét
-    //const float PLAYER_RADIUS = 0.5f;
-    glColor3f(0.0f, 0.0f, 1.0f); // Kék szín a játékoshoz
+    glColor3f(0.0f, 0.0f, 1.0f); 
     draw_wire_sphere(scene->Player.position, PLAYER_RADIUS);
 
-    // Visszakapcsoljuk az állapokat a következő képkockához
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_LIGHTING);
     glLineWidth(1.0f);
@@ -341,20 +343,16 @@ void draw_origin()
 }
 
 void draw_floor() {
-    //glDisable(GL_LIGHTING); // A padló ne legyen árnyékos, hogy mindig lásd az irányokat
     glBegin(GL_QUADS);
     
-    // Adjunk neki egy földszínt, amely a talajhoz illik
     glColor3f(0.45f, 0.33f, 0.18f);
     
-    // A sarkok koordinátái: -50-től 50-ig az 100 méter szélességet ad ki
     glVertex3f(-50.0f, -50.0f, 0.0f);
     glVertex3f( 50.0f, -50.0f, 0.0f);
     glVertex3f( 50.0f,  50.0f, 0.0f);
     glVertex3f(-50.0f,  50.0f, 0.0f);
     
     glEnd();
-    //glEnable(GL_LIGHTING);
 }
 
 void sleep_nerby_creatures(Scene* scene)
@@ -368,14 +366,10 @@ void sleep_nerby_creatures(Scene* scene)
         }
     }
 }
-// Először szükségünk van egy segédre, ami egy gömböt rajzol drótvázasan
+
 void draw_wire_sphere(vec3 center, float radius) {
     glPushMatrix();
     glTranslatef(center.x, center.y, center.z);
-    
-    // Alap OpenGL drótvázas gömb rajzolás
-    // Ha van GLUT, akkor glutWireSphere(radius, 10, 10);
-    // Ha nincs, akkor kézzel kell köröket rajzolnunk:
     
     int lats = 10;
     int longs = 10;
@@ -394,7 +388,6 @@ void draw_wire_sphere(vec3 center, float radius) {
         glEnd();
     }
     
-    // A másik irányú körök
     for (int j = 0; j <= longs; j++) {
         double lng = 2 * M_PI * (double) (j - 1) / longs;
         double x = cos(lng);
@@ -412,16 +405,13 @@ void draw_wire_sphere(vec3 center, float radius) {
     glPopMatrix();
 }
 
-// A sziklák AABB dobozainak kirajzolása
 void draw_wire_box(vec3 position, float half_x, float half_y) {
     glPushMatrix();
     glTranslatef(position.x, position.y, position.z);
     
-    // A sziklák magassága (Z kiterjedése) a modellből: 1.45f
     float half_z = 0.725f; // 1.45 / 2
 
     glBegin(GL_LINE_LOOP);
-        // Alja
         glVertex3f(-half_x, -half_y, -half_z);
         glVertex3f( half_x, -half_y, -half_z);
         glVertex3f( half_x,  half_y, -half_z);
@@ -429,7 +419,6 @@ void draw_wire_box(vec3 position, float half_x, float half_y) {
     glEnd();
 
     glBegin(GL_LINE_LOOP);
-        // Teteje
         glVertex3f(-half_x, -half_y,  half_z);
         glVertex3f( half_x, -half_y,  half_z);
         glVertex3f( half_x,  half_y,  half_z);
@@ -437,7 +426,6 @@ void draw_wire_box(vec3 position, float half_x, float half_y) {
     glEnd();
 
     glBegin(GL_LINES);
-        // Oszlopok
         glVertex3f(-half_x, -half_y, -half_z); glVertex3f(-half_x, -half_y,  half_z);
         glVertex3f( half_x, -half_y, -half_z); glVertex3f( half_x, -half_y,  half_z);
         glVertex3f( half_x,  half_y, -half_z); glVertex3f( half_x,  half_y,  half_z);
@@ -445,4 +433,39 @@ void draw_wire_box(vec3 position, float half_x, float half_y) {
     glEnd();
 
     glPopMatrix();
+}
+
+void render_anomaly(const Anomaly* anomaly)
+{
+    glPushMatrix();
+
+    glTranslatef(anomaly->position.x, anomaly->position.y, anomaly->position.z);
+
+    glRotatef(90.0f,1.0f,0.0f,0.0f);
+
+    static float angle = 0;
+    angle +=0.5f;
+    glRotatef(angle,0.0f,0.0f,1.0f);
+
+    glEnable(GL_BLEND);
+    glDisable(GL_LIGHTING);
+
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glColor4f(1.0f,1.0f,1.0f,1.0f);
+
+    glBindTexture(GL_TEXTURE_2D, anomaly->texture_id);
+
+    glBegin(GL_QUADS);
+        glTexCoord2f(0.0f,0.0f); glVertex3f(-1.0f,-1.0f,0.0f);
+        glTexCoord2f(1.0f,0.0f); glVertex3f(1.0f,-1.0f,0.0f);
+        glTexCoord2f(1.0f,1.0f); glVertex3f(1.0f,1.0f,0.0f);
+        glTexCoord2f(0.0f,1.0f); glVertex3f(-1.0f,1.0f,0.0f);
+    glEnd();
+
+    
+    glDisable(GL_BLEND);
+    glEnable(GL_LIGHTING);
+
+    glPopMatrix();
+
 }

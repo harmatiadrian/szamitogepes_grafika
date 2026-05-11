@@ -137,4 +137,6 @@ void sleep_nerby_creatures(Scene* scene);
 
 void draw_wire_box(vec3 position, float half_x, float half_y);
 
+void render_anomaly(const Anomaly* anomaly);
+
 #endif /* SCENE_H */
