@@ -41,7 +41,7 @@ typedef struct {
     vec3 position;
     float rotation_z;
     float speed;
-    float alertness; // Mennyire veszi észre a játékost
+    //float alertness;
     bool is_sleeping; // Altatás állapota
     float distance_from_player;
     float turn_speed;
@@ -91,7 +91,11 @@ typedef struct Scene
     int entity_count;
     Material material; // Globális anyagbeállításokhoz
     Player Player;
-
+    bool is_paused;
+    bool is_help_visible;
+    GLuint help_texture_id;
+    bool is_main_menu_visible;
+    GLuint main_menu_texture_id;
 } Scene;
 
 

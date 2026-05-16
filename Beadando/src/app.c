@@ -117,73 +117,129 @@ void handle_app_events(App* app)
 
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
-        case SDL_KEYDOWN:
-            switch (event.key.keysym.scancode) {
-            case SDL_SCANCODE_ESCAPE:
-                app->is_running = false;
-                break;
-            case SDL_SCANCODE_W:
-                set_camera_speed(&(app->camera), app->scene.Player.speed);
-                break;
-            case SDL_SCANCODE_S:
-                set_camera_speed(&(app->camera), -(app->scene.Player.speed));
-                break;
-            case SDL_SCANCODE_A:
-                set_camera_side_speed(&(app->camera), app->scene.Player.speed);
-                break;
-            case SDL_SCANCODE_D:
-                set_camera_side_speed(&(app->camera), -(app->scene.Player.speed));
-                break;
-            case SDL_SCANCODE_LSHIFT:
-                if (app->scene.Player.stamina > 0) 
+            case SDL_KEYDOWN:
+                if (app->scene.is_help_visible)
                 {
-                    app->scene.Player.speed = app->scene.Player.speed * 2;
-                    app->scene.Player.is_running = true;
+                    switch (event.key.keysym.scancode)
+                    {
+                    case SDL_SCANCODE_ESCAPE:
+                    case SDL_SCANCODE_F1:
+                        app->scene.is_help_visible = false;
+                        break;
+                    
+                    default:
+                        break;
+                    }
+                }
+                else if (app->scene.is_main_menu_visible)
+                {
+                    switch (event.key.keysym.scancode)
+                    {
+                    case SDL_SCANCODE_RETURN:
+                        app->scene.is_main_menu_visible = false;
+                        break;
+                    case SDL_SCANCODE_F1:
+                        app->scene.is_help_visible = true;
+                        break;
+                    case SDL_SCANCODE_ESCAPE:
+                        app->is_running = false;
+                        break;
+                    default:
+                        break;
+                    }
+                }
+                else if (app->scene.is_paused)
+                {
+                    switch (event.key.keysym.scancode) {
+                    case SDL_SCANCODE_ESCAPE:
+                        app->is_running = false;
+                        break;
+                    case SDL_SCANCODE_F1:
+                        app->scene.is_help_visible = !app->scene.is_help_visible; 
+                        break;
+                    case SDL_SCANCODE_P:
+                        app->scene.is_paused = !app->scene.is_paused;
+                        break;
+                    default:
+                        break;
+                    }
+                }
+                else
+                {
+                    switch (event.key.keysym.scancode) {
+                    case SDL_SCANCODE_ESCAPE:
+                        app->is_running = false;
+                        break;
+                    case SDL_SCANCODE_W:
+                        set_camera_speed(&(app->camera), app->scene.Player.speed);
+                        break;
+                    case SDL_SCANCODE_S:
+                        set_camera_speed(&(app->camera), -(app->scene.Player.speed));
+                        break;
+                    case SDL_SCANCODE_A:
+                        set_camera_side_speed(&(app->camera), app->scene.Player.speed);
+                        break;
+                    case SDL_SCANCODE_D:
+                        set_camera_side_speed(&(app->camera), -(app->scene.Player.speed));
+                        break;
+                    case SDL_SCANCODE_LSHIFT:
+                        if (app->scene.Player.stamina > 0) 
+                        {
+                            app->scene.Player.speed = app->scene.Player.speed * 2;
+                            app->scene.Player.is_running = true;
+                        }
+                        break;
+                    case SDL_SCANCODE_SPACE:
+                        sleep_nerby_creatures(&(app->scene));
+                        break;
+                    case SDL_SCANCODE_F1:
+                        app->scene.is_help_visible = !app->scene.is_help_visible; 
+                        break;
+                    case SDL_SCANCODE_P:
+                        app->scene.is_paused = !app->scene.is_paused;
+                        break;
+                    default:
+                        break;
+                    }
                 }
                 break;
-            case SDL_SCANCODE_SPACE:
-                sleep_nerby_creatures(&(app->scene));
+            case SDL_KEYUP:
+                switch (event.key.keysym.scancode) {
+                    case SDL_SCANCODE_W:
+                    case SDL_SCANCODE_S:
+                        set_camera_speed(&(app->camera), 0);
+                        break;
+                    case SDL_SCANCODE_A:
+                    case SDL_SCANCODE_D:
+                        set_camera_side_speed(&(app->camera), 0);
+                        break;
+                    case SDL_SCANCODE_LSHIFT:
+                        app->scene.Player.speed = app->scene.Player.base_speed;
+                        app->scene.Player.is_running = false;
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            case SDL_MOUSEBUTTONDOWN:
+                is_mouse_down = true;
+                break;
+            case SDL_MOUSEMOTION:
+                SDL_GetMouseState(&x, &y);
+                if (is_mouse_down) {
+                    rotate_camera(&(app->camera), mouse_x - x, mouse_y - y);
+                }
+                mouse_x = x;
+                mouse_y = y;
+                break;
+            case SDL_MOUSEBUTTONUP:
+                is_mouse_down = false;
+                break;
+            case SDL_QUIT:
+                app->is_running = false;
+                break;
             default:
                 break;
-            }
-            break;
-        case SDL_KEYUP:
-            switch (event.key.keysym.scancode) {
-            case SDL_SCANCODE_W:
-            case SDL_SCANCODE_S:
-                set_camera_speed(&(app->camera), 0);
-                break;
-            case SDL_SCANCODE_A:
-            case SDL_SCANCODE_D:
-                set_camera_side_speed(&(app->camera), 0);
-                break;
-            case SDL_SCANCODE_LSHIFT:
-                app->scene.Player.speed = app->scene.Player.base_speed;
-                app->scene.Player.is_running = false;
-                break;
-            default:
-                break;
-            }
-            break;
-        case SDL_MOUSEBUTTONDOWN:
-            is_mouse_down = true;
-            break;
-        case SDL_MOUSEMOTION:
-            SDL_GetMouseState(&x, &y);
-            if (is_mouse_down) {
-                rotate_camera(&(app->camera), mouse_x - x, mouse_y - y);
-            }
-            mouse_x = x;
-            mouse_y = y;
-            break;
-        case SDL_MOUSEBUTTONUP:
-            is_mouse_down = false;
-            break;
-        case SDL_QUIT:
-            app->is_running = false;
-            break;
-        default:
-            break;
         }
     }
 }
@@ -244,7 +300,7 @@ void update_app(App* app)
 }
 
 void render_app(App* app)
-{
+{   
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
 
@@ -253,6 +309,98 @@ void render_app(App* app)
 
     if (app->camera.is_preview_visible) {
         show_texture_preview();
+    }
+
+    if (app->scene.is_main_menu_visible) 
+    {
+        // Kikapcsoljuk a fényeket és a 3D mélységtesztet, hogy semmi ne takarhassa el
+        glDisable(GL_LIGHTING);
+        glDisable(GL_DEPTH_TEST); 
+        glEnable(GL_TEXTURE_2D);
+
+        // Átváltunk 2D-s képernyő-koordinátákra (0,0-tól 800,600-ig)
+        glMatrixMode(GL_PROJECTION);
+        glPushMatrix();
+        glLoadIdentity();
+        glOrtho(0, 800, 600, 0, -10, 10);
+
+        glMatrixMode(GL_MODELVIEW);
+        glPushMatrix();
+        glLoadIdentity();
+
+        //glColor3f(1.0f, 0.0f, 0.0f);
+
+        // Bekötjük a help textúrát
+        glBindTexture(GL_TEXTURE_2D, app->scene.main_menu_texture_id);
+        glColor3f(1.0f, 1.0f, 1.0f); // Tiszta fehér alap, hogy a kép színei ne torzuljanak
+
+        // Kirajzoljuk a teljes képernyőt lefedő négyzetet
+        glBegin(GL_QUADS);
+            glTexCoord2f(0, 0); glVertex2f(0, 0);
+            glTexCoord2f(1, 0); glVertex2f(800, 0);
+            glTexCoord2f(1, 1); glVertex2f(800, 600);
+            glTexCoord2f(0, 1); glVertex2f(0, 600);
+        glEnd();
+
+        glDisable(GL_TEXTURE_2D);
+
+        // Visszaállítjuk a kamerát az eredeti 3D-s állapotba a következő képkockához
+        glMatrixMode(GL_PROJECTION);
+        glPopMatrix();
+        glMatrixMode(GL_MODELVIEW);
+        glPopMatrix();
+            
+        glBindTexture(GL_TEXTURE_2D,0);
+        glDisable(GL_TEXTURE_2D);
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_LIGHTING);
+
+    }
+
+    if (app->scene.is_help_visible) 
+    {
+        // Kikapcsoljuk a fényeket és a 3D mélységtesztet, hogy semmi ne takarhassa el
+        glDisable(GL_LIGHTING);
+        glDisable(GL_DEPTH_TEST); 
+        glEnable(GL_TEXTURE_2D);
+
+        // Átváltunk 2D-s képernyő-koordinátákra (0,0-tól 800,600-ig)
+        glMatrixMode(GL_PROJECTION);
+        glPushMatrix();
+        glLoadIdentity();
+        glOrtho(0, 800, 600, 0, -10, 10);
+
+        glMatrixMode(GL_MODELVIEW);
+        glPushMatrix();
+        glLoadIdentity();
+
+        //glColor3f(1.0f, 0.0f, 0.0f);
+
+        // Bekötjük a help textúrát
+        glBindTexture(GL_TEXTURE_2D, app->scene.help_texture_id);
+        glColor3f(1.0f, 1.0f, 1.0f); // Tiszta fehér alap, hogy a kép színei ne torzuljanak
+
+        // Kirajzoljuk a teljes képernyőt lefedő négyzetet
+        glBegin(GL_QUADS);
+            glTexCoord2f(0, 0); glVertex2f(0, 0);
+            glTexCoord2f(1, 0); glVertex2f(800, 0);
+            glTexCoord2f(1, 1); glVertex2f(800, 600);
+            glTexCoord2f(0, 1); glVertex2f(0, 600);
+        glEnd();
+
+        glDisable(GL_TEXTURE_2D);
+
+        // Visszaállítjuk a kamerát az eredeti 3D-s állapotba a következő képkockához
+        glMatrixMode(GL_PROJECTION);
+        glPopMatrix();
+        glMatrixMode(GL_MODELVIEW);
+        glPopMatrix();
+            
+        glBindTexture(GL_TEXTURE_2D,0);
+        glDisable(GL_TEXTURE_2D);
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_LIGHTING);
+
     }
 
     SDL_GL_SwapWindow(app->window);

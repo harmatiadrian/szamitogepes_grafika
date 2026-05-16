@@ -13,6 +13,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <stdbool.h>
 
 #define ROCK_HALF_Y (4.0f)
 #define ROCK_HALF_X (3.0f)
@@ -45,6 +46,7 @@ void init_scene(Scene* scene)
     scene->animal_count = 1;
     scene->anomaly_count = 1;
     scene->entity_count = 2;
+    //scene->is_paused = true;
 
     #if !defined(_WIN32) && !defined(_WIN64) && !defined(__linux__)
         srand((unsigned)time(NULL));
@@ -100,6 +102,15 @@ void init_scene(Scene* scene)
     scene->material.diffuse = (Color){1.0, 1.0, 1.0};
     scene->material.specular = (Color){0.0, 0.0, 0.0};
     scene->material.shininess = 0.0;
+
+    scene->help_texture_id = load_texture("assets/textures/help.png", false);
+    //scene->is_help_visible = false;
+
+
+    scene->is_paused = false;
+    scene->is_help_visible = false;
+    scene->is_main_menu_visible = true;
+    scene->main_menu_texture_id = load_texture("assets/textures/menu.png", false);
 }
 
 void set_lighting()
@@ -151,102 +162,114 @@ void set_material(const Material* material)
 
 void update_scene(Scene* scene, vec3 camera_pos, double elapsed_time)
 {
+    //printf("bool paused: %d, bool help visible: %d\n", scene->is_paused, scene->is_help_visible);
 
-    for (int i = 0; i < scene->animal_count; i++)
+    if (scene->is_main_menu_visible == false)
     {
-        Animal* animal = &(scene->animals[i]);
-        if (animal->sleeping_time < 0)
+        if (scene->is_help_visible == false)
         {
-            animal->is_sleeping = false;
-            animal->sleeping_time = 0;
-        }
-        if (animal->is_sleeping)
-        {
-            animal->sleeping_time -= 1.0f * elapsed_time;
-            //printf("sleep: %f \n",animal->sleeping_time);
-            continue;
-        } 
+            if (scene->is_paused == false)
+            {
+            
+                for (int i = 0; i < scene->animal_count; i++)
+                {
+                    Animal* animal = &(scene->animals[i]);
+                    if (animal->sleeping_time < 0)
+                    {
+                        animal->is_sleeping = false;
+                        animal->sleeping_time = 0;
+                    }
+                    if (animal->is_sleeping)
+                    {
+                        animal->sleeping_time -= 1.0f * elapsed_time;
+                        //printf("sleep: %f \n",animal->sleeping_time);
+                        continue;
+                    } 
 
-        double dx = camera_pos.x - animal->position.x;
-        double dy = camera_pos.y - animal->position.y;
-        double distance = sqrt(dx*dx + dy*dy);
-        animal->distance_from_player = distance;
+                    double dx = camera_pos.x - animal->position.x;
+                    double dy = camera_pos.y - animal->position.y;
+                    double distance = sqrt(dx*dx + dy*dy);
+                    animal->distance_from_player = distance;
 
-        if (animal->distance_from_player > 7.0f && distance > 1e-6)
-        {
-            float next_x = animal->position.x + (dx / distance) * animal->speed * elapsed_time;
-            float next_y = animal->position.y + (dy / distance) * animal->speed * elapsed_time;
+                    if (animal->distance_from_player > 7.0f && distance > 1e-6)
+                    {
+                        float next_x = animal->position.x + (dx / distance) * animal->speed * elapsed_time;
+                        float next_y = animal->position.y + (dy / distance) * animal->speed * elapsed_time;
 
-            bool collision = false;
-            for (int j = 0; j < scene->entity_count; j++) {
-                Entity* rock = &(scene->entities[j]);
-                
-                float b_min_x = rock->position.x - ROCK_HALF_X;
-                float b_max_x = rock->position.x + ROCK_HALF_X;
-                float b_min_y = rock->position.y - ROCK_HALF_Y;
-                float b_max_y = rock->position.y + ROCK_HALF_Y;
+                        bool collision = false;
+                        for (int j = 0; j < scene->entity_count; j++) {
+                            Entity* rock = &(scene->entities[j]);
+                            
+                            float b_min_x = rock->position.x - ROCK_HALF_X;
+                            float b_max_x = rock->position.x + ROCK_HALF_X;
+                            float b_min_y = rock->position.y - ROCK_HALF_Y;
+                            float b_max_y = rock->position.y + ROCK_HALF_Y;
 
-                float closest_x = clamp_double(next_x, b_min_x, b_max_x);
-                float closest_y = clamp_double(next_y, b_min_y, b_max_y);
+                            float closest_x = clamp_double(next_x, b_min_x, b_max_x);
+                            float closest_y = clamp_double(next_y, b_min_y, b_max_y);
 
-                float dist_x = next_x - closest_x;
-                float dist_y = next_y - closest_y;
+                            float dist_x = next_x - closest_x;
+                            float dist_y = next_y - closest_y;
 
-                if ((dist_x*dist_x + dist_y*dist_y) < (TREX_RADIUS * TREX_RADIUS)) {
-                    collision = true;
-                    break;
+                            if ((dist_x*dist_x + dist_y*dist_y) < (TREX_RADIUS * TREX_RADIUS)) {
+                                collision = true;
+                                break;
+                            }
+                        }
+
+                        if (!collision) {
+                            animal->position.x = next_x;
+                            animal->position.y = next_y;
+                        }
+                    }
+
+                    float target_angle = atan2(dy, dx) * 180.0 / M_PI - 90.0f;
+                    float angle_diff = target_angle - animal->rotation_z;
+                    while (angle_diff < -180) angle_diff += 360;
+                    while (angle_diff > 180) angle_diff -= 360;
+                    animal->rotation_z += angle_diff * animal->turn_speed * elapsed_time;
+
+                    if (animal->distance_from_player <= animal->attak_distance)
+                    {
+                        if (scene->Player.hp > 0)
+                        {
+                            scene->Player.hp -= animal->attak_damige * elapsed_time;
+                        }
+                        else
+                        {
+                            scene->Player.hp = 0;
+                        }
+                        printf("player hp: %f \n",(scene->Player.hp) *100);
+                    }
+                    //animal->stamina -= 0.1f * elapsed_time;
                 }
+                scene->Player.position.x = camera_pos.x;
+                scene->Player.position.y = camera_pos.y;
+                scene->Player.position.z = camera_pos.z;
+                //printf("player stamina: %f \n player position: %f, %f, %f",(scene->Player.stamina), scene->Player.position.x, scene->Player.position.y, scene->Player.position.z);
+                //printf("animal distance: %f ; animal sleeping: %d\n",scene->animals[0].distance_from_player, scene->animals[0].is_sleeping);
+
+
+                if (scene->Player.is_running) {
+                    scene->Player.stamina -= 1.0f * elapsed_time;
+                    if (scene->Player.stamina < 0) {
+                        scene->Player.stamina = 0;
+                        scene->Player.speed = scene->Player.base_speed;
+                        scene->Player.is_running = false;
+                    }
+                } else {
+                    scene->Player.stamina += 0.5f * elapsed_time;
+                    if (scene->Player.stamina > 100.0f) {
+                        scene->Player.stamina = 100.0f;
+                    }
+                }
+
+                scene->Player.position.x = clamp_double(scene->Player.position.x, -50.0, 50.0);
+                scene->Player.position.y = clamp_double(scene->Player.position.y, -50.0, 50.0);
+
             }
-
-            if (!collision) {
-                animal->position.x = next_x;
-                animal->position.y = next_y;
-            }
-        }
-
-        float target_angle = atan2(dy, dx) * 180.0 / M_PI - 90.0f;
-        float angle_diff = target_angle - animal->rotation_z;
-        while (angle_diff < -180) angle_diff += 360;
-        while (angle_diff > 180) angle_diff -= 360;
-        animal->rotation_z += angle_diff * animal->turn_speed * elapsed_time;
-
-        if (animal->distance_from_player <= animal->attak_distance)
-        {
-            if (scene->Player.hp > 0)
-            {
-                scene->Player.hp -= animal->attak_damige * elapsed_time;
-            }
-            else
-            {
-                scene->Player.hp = 0;
-            }
-            printf("player hp: %f \n",(scene->Player.hp) *100);
-        }
-        //animal->stamina -= 0.1f * elapsed_time;
-    }
-    scene->Player.position.x = camera_pos.x;
-    scene->Player.position.y = camera_pos.y;
-    scene->Player.position.z = camera_pos.z;
-    //printf("player stamina: %f \n player position: %f, %f, %f",(scene->Player.stamina), scene->Player.position.x, scene->Player.position.y, scene->Player.position.z);
-    //printf("animal distance: %f ; animal sleeping: %d\n",scene->animals[0].distance_from_player, scene->animals[0].is_sleeping);
-
-
-    if (scene->Player.is_running) {
-        scene->Player.stamina -= 1.0f * elapsed_time;
-        if (scene->Player.stamina < 0) {
-            scene->Player.stamina = 0;
-            scene->Player.speed = scene->Player.base_speed;
-            scene->Player.is_running = false;
-        }
-    } else {
-        scene->Player.stamina += 0.5f * elapsed_time;
-        if (scene->Player.stamina > 100.0f) {
-            scene->Player.stamina = 100.0f;
         }
     }
-
-    scene->Player.position.x = clamp_double(scene->Player.position.x, -50.0, 50.0);
-    scene->Player.position.y = clamp_double(scene->Player.position.y, -50.0, 50.0);
 }
 
 void render_scene(const Scene* scene)

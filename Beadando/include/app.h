@@ -24,6 +24,9 @@ typedef struct App
     double uptime;
     Camera camera;
     Scene scene;
+    //GLuint menu_texture_id;
+    //GLuint help_texture_id;
+    //bool is_help_visible;
 } App;
 
 /**
