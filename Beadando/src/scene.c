@@ -406,6 +406,7 @@ void sleep_nerby_creatures(Scene* scene)
         if (animal->distance_from_player < 8.0f) {
             animal->is_sleeping = true;
             animal->sleeping_time = 10.0f;
+            scene->is_any_animal_awake = false;
         }
     }
 }
@@ -421,6 +422,7 @@ void close_nerby_anomalies(Scene* scene)
 
         if (distance < 5.0f) {
             anomaly->is_open = false;
+            scene->is_any_anomaly_open = false;
         }
     }
 }
