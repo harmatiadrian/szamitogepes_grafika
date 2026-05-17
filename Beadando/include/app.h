@@ -64,4 +64,9 @@ void render_app(App* app);
  */
 void destroy_app(App* app);
 
+/**
+ * Render a fullscreen texture.
+ */
+void render_fullscreen_texture(App* app, GLuint texture_id);
+
 #endif /* APP_H */

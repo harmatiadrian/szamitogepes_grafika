@@ -69,6 +69,7 @@ void init_scene(Scene* scene)
     scene->animals[0].stamina = 50.0f;
     scene->animals[0].is_running = false;
     scene->animals[0].sleeping_time = 0.0f;
+    scene->is_any_animal_awake = true;
 
     scene->entities[0].position.x = random_between(-40.0, 40.0);
     scene->entities[0].position.y = random_between(-40.0, 40.0);
@@ -86,7 +87,10 @@ void init_scene(Scene* scene)
     scene->anomalies[0].position.y = random_between(-40.0, 40.0);
     scene->anomalies[0].position.z = 1.8f;
     scene->anomalies[0].texture_id = load_texture("assets/textures/anomaly.png",true);
-    
+    scene->anomalies[0].is_open = true;
+    scene->is_any_anomaly_open = true;
+    scene->anomalies[0].leading_time = Cretaceous;
+
     scene->Player.position.x = 0;
     scene->Player.position.y = 0;
     scene->Player.position.z = 0;
@@ -106,9 +110,13 @@ void init_scene(Scene* scene)
     scene->help_texture_id = load_texture("assets/textures/help.png", false);
     //scene->is_help_visible = false;
 
+    scene->lose_screen_texture_id = load_texture("assets/textures/game_over.png", false);
+    scene->win_screen_texture_id = load_texture("assets/textures/win.png", false);
 
     scene->is_paused = false;
     scene->is_help_visible = false;
+    scene->lose_screen_visible = false;
+    scene->win_screen_visible = false;
     scene->is_main_menu_visible = true;
     scene->main_menu_texture_id = load_texture("assets/textures/menu.png", false);
 }
@@ -163,112 +171,119 @@ void set_material(const Material* material)
 void update_scene(Scene* scene, vec3 camera_pos, double elapsed_time)
 {
     //printf("bool paused: %d, bool help visible: %d\n", scene->is_paused, scene->is_help_visible);
-
-    if (scene->is_main_menu_visible == false)
+    if (scene->win_screen_visible == false && 
+        scene->lose_screen_visible == false && 
+        scene->is_main_menu_visible == false && 
+        scene->is_help_visible == false && 
+        scene->is_paused == false
+        )
     {
-        if (scene->is_help_visible == false)
+    
+        for (int i = 0; i < scene->animal_count; i++)
         {
-            if (scene->is_paused == false)
+            Animal* animal = &(scene->animals[i]);
+            if (animal->sleeping_time < 0)
             {
+                animal->is_sleeping = false;
+                animal->sleeping_time = 0;
+            }
+            if (animal->is_sleeping)
+            {
+                animal->sleeping_time -= 1.0f * elapsed_time;
+                //printf("sleep: %f \n",animal->sleeping_time);
+                continue;
+            } 
             
-                for (int i = 0; i < scene->animal_count; i++)
+            scene->is_any_animal_awake = true;
+
+            double dx = camera_pos.x - animal->position.x;
+            double dy = camera_pos.y - animal->position.y;
+            double distance = sqrt(dx*dx + dy*dy);
+            animal->distance_from_player = distance;
+
+            if (animal->distance_from_player > 7.0f && distance > 1e-6)
+            {
+                float next_x = animal->position.x + (dx / distance) * animal->speed * elapsed_time;
+                float next_y = animal->position.y + (dy / distance) * animal->speed * elapsed_time;
+
+                bool collision = false;
+                for (int j = 0; j < scene->entity_count; j++) {
+                    Entity* rock = &(scene->entities[j]);
+                    
+                    float b_min_x = rock->position.x - ROCK_HALF_X;
+                    float b_max_x = rock->position.x + ROCK_HALF_X;
+                    float b_min_y = rock->position.y - ROCK_HALF_Y;
+                    float b_max_y = rock->position.y + ROCK_HALF_Y;
+
+                    float closest_x = clamp_double(next_x, b_min_x, b_max_x);
+                    float closest_y = clamp_double(next_y, b_min_y, b_max_y);
+
+                    float dist_x = next_x - closest_x;
+                    float dist_y = next_y - closest_y;
+
+                    if ((dist_x*dist_x + dist_y*dist_y) < (TREX_RADIUS * TREX_RADIUS)) {
+                        collision = true;
+                        break;
+                    }
+                }
+
+                if (!collision) {
+                    animal->position.x = next_x;
+                    animal->position.y = next_y;
+                }
+            }
+
+            float target_angle = atan2(dy, dx) * 180.0 / M_PI - 90.0f;
+            float angle_diff = target_angle - animal->rotation_z;
+            while (angle_diff < -180) angle_diff += 360;
+            while (angle_diff > 180) angle_diff -= 360;
+            animal->rotation_z += angle_diff * animal->turn_speed * elapsed_time;
+
+            if ((animal->distance_from_player <= animal->attak_distance) && (scene->Player.hp > 0))
+            {
+                scene->Player.hp -= animal->attak_damige * elapsed_time;
+                if (scene->Player.hp < 0)
                 {
-                    Animal* animal = &(scene->animals[i]);
-                    if (animal->sleeping_time < 0)
-                    {
-                        animal->is_sleeping = false;
-                        animal->sleeping_time = 0;
-                    }
-                    if (animal->is_sleeping)
-                    {
-                        animal->sleeping_time -= 1.0f * elapsed_time;
-                        //printf("sleep: %f \n",animal->sleeping_time);
-                        continue;
-                    } 
-
-                    double dx = camera_pos.x - animal->position.x;
-                    double dy = camera_pos.y - animal->position.y;
-                    double distance = sqrt(dx*dx + dy*dy);
-                    animal->distance_from_player = distance;
-
-                    if (animal->distance_from_player > 7.0f && distance > 1e-6)
-                    {
-                        float next_x = animal->position.x + (dx / distance) * animal->speed * elapsed_time;
-                        float next_y = animal->position.y + (dy / distance) * animal->speed * elapsed_time;
-
-                        bool collision = false;
-                        for (int j = 0; j < scene->entity_count; j++) {
-                            Entity* rock = &(scene->entities[j]);
-                            
-                            float b_min_x = rock->position.x - ROCK_HALF_X;
-                            float b_max_x = rock->position.x + ROCK_HALF_X;
-                            float b_min_y = rock->position.y - ROCK_HALF_Y;
-                            float b_max_y = rock->position.y + ROCK_HALF_Y;
-
-                            float closest_x = clamp_double(next_x, b_min_x, b_max_x);
-                            float closest_y = clamp_double(next_y, b_min_y, b_max_y);
-
-                            float dist_x = next_x - closest_x;
-                            float dist_y = next_y - closest_y;
-
-                            if ((dist_x*dist_x + dist_y*dist_y) < (TREX_RADIUS * TREX_RADIUS)) {
-                                collision = true;
-                                break;
-                            }
-                        }
-
-                        if (!collision) {
-                            animal->position.x = next_x;
-                            animal->position.y = next_y;
-                        }
-                    }
-
-                    float target_angle = atan2(dy, dx) * 180.0 / M_PI - 90.0f;
-                    float angle_diff = target_angle - animal->rotation_z;
-                    while (angle_diff < -180) angle_diff += 360;
-                    while (angle_diff > 180) angle_diff -= 360;
-                    animal->rotation_z += angle_diff * animal->turn_speed * elapsed_time;
-
-                    if (animal->distance_from_player <= animal->attak_distance)
-                    {
-                        if (scene->Player.hp > 0)
-                        {
-                            scene->Player.hp -= animal->attak_damige * elapsed_time;
-                        }
-                        else
-                        {
-                            scene->Player.hp = 0;
-                        }
-                        printf("player hp: %f \n",(scene->Player.hp) *100);
-                    }
-                    //animal->stamina -= 0.1f * elapsed_time;
+                    scene->Player.hp = 0;
                 }
-                scene->Player.position.x = camera_pos.x;
-                scene->Player.position.y = camera_pos.y;
-                scene->Player.position.z = camera_pos.z;
-                //printf("player stamina: %f \n player position: %f, %f, %f",(scene->Player.stamina), scene->Player.position.x, scene->Player.position.y, scene->Player.position.z);
-                //printf("animal distance: %f ; animal sleeping: %d\n",scene->animals[0].distance_from_player, scene->animals[0].is_sleeping);
+                printf("player hp: %f \n",(scene->Player.hp) *100);
+            }
+            //animal->stamina -= 0.1f * elapsed_time;
+        }
+        scene->Player.position.x = camera_pos.x;
+        scene->Player.position.y = camera_pos.y;
+        scene->Player.position.z = camera_pos.z;
+        //printf("player stamina: %f \n player position: %f, %f, %f",(scene->Player.stamina), scene->Player.position.x, scene->Player.position.y, scene->Player.position.z);
+        //printf("animal distance: %f ; animal sleeping: %d\n",scene->animals[0].distance_from_player, scene->animals[0].is_sleeping);
 
 
-                if (scene->Player.is_running) {
-                    scene->Player.stamina -= 1.0f * elapsed_time;
-                    if (scene->Player.stamina < 0) {
-                        scene->Player.stamina = 0;
-                        scene->Player.speed = scene->Player.base_speed;
-                        scene->Player.is_running = false;
-                    }
-                } else {
-                    scene->Player.stamina += 0.5f * elapsed_time;
-                    if (scene->Player.stamina > 100.0f) {
-                        scene->Player.stamina = 100.0f;
-                    }
-                }
-
-                scene->Player.position.x = clamp_double(scene->Player.position.x, -50.0, 50.0);
-                scene->Player.position.y = clamp_double(scene->Player.position.y, -50.0, 50.0);
-
+        if (scene->Player.is_running) {
+            scene->Player.stamina -= 1.0f * elapsed_time;
+            if (scene->Player.stamina < 0) {
+                scene->Player.stamina = 0;
+                scene->Player.speed = scene->Player.base_speed;
+                scene->Player.is_running = false;
+            }
+        } else {
+            scene->Player.stamina += 0.5f * elapsed_time;
+            if (scene->Player.stamina > 100.0f) {
+                scene->Player.stamina = 100.0f;
             }
         }
+
+        scene->Player.position.x = clamp_double(scene->Player.position.x, -50.0, 50.0);
+        scene->Player.position.y = clamp_double(scene->Player.position.y, -50.0, 50.0);
+
+    }
+
+    if (scene->Player.hp <= 0)
+    {
+        scene->lose_screen_visible = true;
+    }
+
+    if (((scene->animal_count == 0) || (scene->is_any_animal_awake == false)) && (scene->Player.hp > 0) && (scene->is_any_anomaly_open == false))
+    {
+        scene->win_screen_visible = true;
     }
 }
 
@@ -395,6 +410,21 @@ void sleep_nerby_creatures(Scene* scene)
     }
 }
 
+void close_nerby_anomalies(Scene* scene)
+{
+    for (int i = 0; i < scene->anomaly_count; i++)
+    {
+        Anomaly* anomaly = &(scene->anomalies[i]);
+        double dx = scene->Player.position.x - anomaly->position.x;
+        double dy = scene->Player.position.y - anomaly->position.y;
+        double distance = sqrt(dx*dx + dy*dy);
+
+        if (distance < 5.0f) {
+            anomaly->is_open = false;
+        }
+    }
+}
+
 void draw_wire_sphere(vec3 center, float radius) {
     glPushMatrix();
     glTranslatef(center.x, center.y, center.z);
@@ -498,4 +528,79 @@ void render_anomaly(const Anomaly* anomaly)
 
     glPopMatrix();
 
+}
+
+void restart_scene(Scene* scene)
+{
+    scene->animal_count = 1;
+    scene->anomaly_count = 1;
+    scene->entity_count = 2;
+
+    //load_model(&(scene->animals[0].model), "assets/models/Trex.obj");
+    //load_model(&(scene->entities[0].model), "assets/models/Long Boulder.obj");
+    //load_model(&(scene->entities[1].model), "assets/models/Long Boulder.obj");
+    //scene->animals[0].texture_id = load_texture("assets/textures/Rexy_Diffuse.png",false);
+    scene->animals[0].position.x = 10.0;
+    scene->animals[0].position.y = 10.0;
+    scene->animals[0].position.z = 0.0;
+    scene->animals[0].rotation_z = 0.0;
+    scene->animals[0].speed = 1.0f;
+    scene->animals[0].base_speed = 1.0f;
+    scene->animals[0].turn_speed = 1.0f;
+    scene->animals[0].is_sleeping = false;
+    scene->animals[0].attak_distance = 8.0f;
+    scene->animals[0].attak_damige = .2f;
+    scene->animals[0].stamina = 50.0f;
+    scene->animals[0].is_running = false;
+    scene->animals[0].sleeping_time = 0.0f;
+    scene->is_any_animal_awake = true;
+
+    scene->entities[0].position.x = random_between(-40.0, 40.0);
+    scene->entities[0].position.y = random_between(-40.0, 40.0);
+    scene->entities[0].position.z = -0.4f;
+    scene->entities[0].rotation_z = 0.0f;
+    //scene->entities[0].texture_id = load_texture("assets/textures/Long Boulder.png",false);
+
+    scene->entities[1].position.x = random_between(-40.0, 40.0);
+    scene->entities[1].position.y = random_between(-40.0, 40.0);
+    scene->entities[1].position.z = -0.4f;
+    scene->entities[1].rotation_z = 0.0f;
+    //scene->entities[1].texture_id = load_texture("assets/textures/Long Boulder.png",false);
+    
+    scene->anomalies[0].position.x = random_between(-40.0, 40.0);
+    scene->anomalies[0].position.y = random_between(-40.0, 40.0);
+    scene->anomalies[0].position.z = 1.8f;
+    //scene->anomalies[0].texture_id = load_texture("assets/textures/anomaly.png",true);
+    scene->anomalies[0].is_open = true;
+    scene->is_any_anomaly_open = true;
+    scene->anomalies[0].leading_time = Cretaceous;
+
+    scene->Player.position.x = 0;
+    scene->Player.position.y = 0;
+    scene->Player.position.z = 0;
+    scene->Player.rotation_z = 0.0f;
+    scene->Player.hp = 1.0f;
+    scene->Player.speed = 1.5f;
+    scene->Player.base_speed = 1.5f;
+    scene->Player.stamina = 100.0f;
+    scene->Player.is_running = false;
+
+    // Alapértelmezett anyagtulajdonságok
+    scene->material.ambient = (Color){1.0, 1.0, 1.0};
+    scene->material.diffuse = (Color){1.0, 1.0, 1.0};
+    scene->material.specular = (Color){0.0, 0.0, 0.0};
+    scene->material.shininess = 0.0;
+
+    //scene->help_texture_id = load_texture("assets/textures/help.png", false);
+    //scene->is_help_visible = false;
+
+    //scene->lose_screen_texture_id = load_texture("assets/textures/game_over.png", false);
+    //scene->win_screen_texture_id = load_texture("assets/textures/win.png", false);
+
+    scene->is_paused = false;
+    scene->is_help_visible = false;
+    scene->lose_screen_visible = false;
+    scene->win_screen_visible = false;
+    scene->is_main_menu_visible = false;
+    //scene->main_menu_texture_id = load_texture("assets/textures/menu.png", false);
 }

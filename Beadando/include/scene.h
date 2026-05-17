@@ -85,8 +85,10 @@ typedef struct Scene
 {
     Animal animals[MAX_ANIMAL_COUNT];
     int animal_count;
+    bool is_any_animal_awake;
     Anomaly anomalies[MAX_ANOMALIES];
     int anomaly_count;
+    bool is_any_anomaly_open;
     Entity entities[MAX_ENTITIES];
     int entity_count;
     Material material; // Globális anyagbeállításokhoz
@@ -96,6 +98,10 @@ typedef struct Scene
     GLuint help_texture_id;
     bool is_main_menu_visible;
     GLuint main_menu_texture_id;
+    bool lose_screen_visible;
+    bool win_screen_visible;
+    GLuint lose_screen_texture_id;
+    GLuint win_screen_texture_id;
 } Scene;
 
 
@@ -142,5 +148,7 @@ void sleep_nerby_creatures(Scene* scene);
 void draw_wire_box(vec3 position, float half_x, float half_y);
 
 void render_anomaly(const Anomaly* anomaly);
+
+void close_nerby_anomalies(Scene* scene);
 
 #endif /* SCENE_H */

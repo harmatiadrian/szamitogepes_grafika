@@ -164,6 +164,42 @@ void handle_app_events(App* app)
                         break;
                     }
                 }
+                else if (app->scene.lose_screen_visible)
+                {
+                    switch (event.key.keysym.scancode)
+                    {
+                    case SDL_SCANCODE_RETURN:
+                        app->scene.lose_screen_visible = false;
+                        restart_scene(&(app->scene));
+                        break;
+                    case SDL_SCANCODE_F1:
+                        app->scene.is_help_visible = true;
+                        break;
+                    case SDL_SCANCODE_ESCAPE:
+                        app->is_running = false;
+                        break;
+                    default:
+                        break;
+                    }
+                }
+                else if (app->scene.win_screen_visible)
+                {
+                    switch (event.key.keysym.scancode)
+                    {
+                    case SDL_SCANCODE_RETURN:
+                        app->scene.win_screen_visible = false;
+                        restart_scene(&(app->scene));
+                        break;
+                    case SDL_SCANCODE_F1:
+                        app->scene.is_help_visible = true;
+                        break;
+                    case SDL_SCANCODE_ESCAPE:
+                        app->is_running = false;
+                        break;
+                    default:
+                        break;
+                    }
+                }
                 else
                 {
                     switch (event.key.keysym.scancode) {
@@ -191,6 +227,7 @@ void handle_app_events(App* app)
                         break;
                     case SDL_SCANCODE_SPACE:
                         sleep_nerby_creatures(&(app->scene));
+                        close_nerby_anomalies(&(app->scene));
                         break;
                     case SDL_SCANCODE_F1:
                         app->scene.is_help_visible = !app->scene.is_help_visible; 
@@ -311,96 +348,24 @@ void render_app(App* app)
         show_texture_preview();
     }
 
+    if (app->scene.lose_screen_visible)
+    {
+        render_fullscreen_texture(app, app->scene.lose_screen_texture_id);
+    }
+
+    if (app->scene.win_screen_visible)
+    {
+        render_fullscreen_texture(app, app->scene.win_screen_texture_id);
+    }
+    
     if (app->scene.is_main_menu_visible) 
     {
-        // Kikapcsoljuk a fényeket és a 3D mélységtesztet, hogy semmi ne takarhassa el
-        glDisable(GL_LIGHTING);
-        glDisable(GL_DEPTH_TEST); 
-        glEnable(GL_TEXTURE_2D);
-
-        // Átváltunk 2D-s képernyő-koordinátákra (0,0-tól 800,600-ig)
-        glMatrixMode(GL_PROJECTION);
-        glPushMatrix();
-        glLoadIdentity();
-        glOrtho(0, 800, 600, 0, -10, 10);
-
-        glMatrixMode(GL_MODELVIEW);
-        glPushMatrix();
-        glLoadIdentity();
-
-        //glColor3f(1.0f, 0.0f, 0.0f);
-
-        // Bekötjük a help textúrát
-        glBindTexture(GL_TEXTURE_2D, app->scene.main_menu_texture_id);
-        glColor3f(1.0f, 1.0f, 1.0f); // Tiszta fehér alap, hogy a kép színei ne torzuljanak
-
-        // Kirajzoljuk a teljes képernyőt lefedő négyzetet
-        glBegin(GL_QUADS);
-            glTexCoord2f(0, 0); glVertex2f(0, 0);
-            glTexCoord2f(1, 0); glVertex2f(800, 0);
-            glTexCoord2f(1, 1); glVertex2f(800, 600);
-            glTexCoord2f(0, 1); glVertex2f(0, 600);
-        glEnd();
-
-        glDisable(GL_TEXTURE_2D);
-
-        // Visszaállítjuk a kamerát az eredeti 3D-s állapotba a következő képkockához
-        glMatrixMode(GL_PROJECTION);
-        glPopMatrix();
-        glMatrixMode(GL_MODELVIEW);
-        glPopMatrix();
-            
-        glBindTexture(GL_TEXTURE_2D,0);
-        glDisable(GL_TEXTURE_2D);
-        glEnable(GL_DEPTH_TEST);
-        glEnable(GL_LIGHTING);
-
+        render_fullscreen_texture(app, app->scene.main_menu_texture_id);
     }
 
     if (app->scene.is_help_visible) 
     {
-        // Kikapcsoljuk a fényeket és a 3D mélységtesztet, hogy semmi ne takarhassa el
-        glDisable(GL_LIGHTING);
-        glDisable(GL_DEPTH_TEST); 
-        glEnable(GL_TEXTURE_2D);
-
-        // Átváltunk 2D-s képernyő-koordinátákra (0,0-tól 800,600-ig)
-        glMatrixMode(GL_PROJECTION);
-        glPushMatrix();
-        glLoadIdentity();
-        glOrtho(0, 800, 600, 0, -10, 10);
-
-        glMatrixMode(GL_MODELVIEW);
-        glPushMatrix();
-        glLoadIdentity();
-
-        //glColor3f(1.0f, 0.0f, 0.0f);
-
-        // Bekötjük a help textúrát
-        glBindTexture(GL_TEXTURE_2D, app->scene.help_texture_id);
-        glColor3f(1.0f, 1.0f, 1.0f); // Tiszta fehér alap, hogy a kép színei ne torzuljanak
-
-        // Kirajzoljuk a teljes képernyőt lefedő négyzetet
-        glBegin(GL_QUADS);
-            glTexCoord2f(0, 0); glVertex2f(0, 0);
-            glTexCoord2f(1, 0); glVertex2f(800, 0);
-            glTexCoord2f(1, 1); glVertex2f(800, 600);
-            glTexCoord2f(0, 1); glVertex2f(0, 600);
-        glEnd();
-
-        glDisable(GL_TEXTURE_2D);
-
-        // Visszaállítjuk a kamerát az eredeti 3D-s állapotba a következő képkockához
-        glMatrixMode(GL_PROJECTION);
-        glPopMatrix();
-        glMatrixMode(GL_MODELVIEW);
-        glPopMatrix();
-            
-        glBindTexture(GL_TEXTURE_2D,0);
-        glDisable(GL_TEXTURE_2D);
-        glEnable(GL_DEPTH_TEST);
-        glEnable(GL_LIGHTING);
-
+        render_fullscreen_texture(app, app->scene.help_texture_id);
     }
 
     SDL_GL_SwapWindow(app->window);
@@ -417,4 +382,49 @@ void destroy_app(App* app)
     }
 
     SDL_Quit();
+}
+
+void render_fullscreen_texture(App* app, GLuint texture_id)
+{
+        // Kikapcsoljuk a fényeket és a 3D mélységtesztet, hogy semmi ne takarhassa el
+        glDisable(GL_LIGHTING);
+        glDisable(GL_DEPTH_TEST); 
+        glEnable(GL_TEXTURE_2D);
+
+        // Átváltunk 2D-s képernyő-koordinátákra (0,0-tól 800,600-ig)
+        glMatrixMode(GL_PROJECTION);
+        glPushMatrix();
+        glLoadIdentity();
+        glOrtho(0, 800, 600, 0, -10, 10);
+
+        glMatrixMode(GL_MODELVIEW);
+        glPushMatrix();
+        glLoadIdentity();
+
+        //glColor3f(1.0f, 0.0f, 0.0f);
+
+        // Bekötjük a help textúrát
+        glBindTexture(GL_TEXTURE_2D, texture_id);
+        glColor3f(1.0f, 1.0f, 1.0f); // Tiszta fehér alap, hogy a kép színei ne torzuljanak
+
+        // Kirajzoljuk a teljes képernyőt lefedő négyzetet
+        glBegin(GL_QUADS);
+            glTexCoord2f(0, 0); glVertex2f(0, 0);
+            glTexCoord2f(1, 0); glVertex2f(800, 0);
+            glTexCoord2f(1, 1); glVertex2f(800, 600);
+            glTexCoord2f(0, 1); glVertex2f(0, 600);
+        glEnd();
+
+        glDisable(GL_TEXTURE_2D);
+
+        // Visszaállítjuk a kamerát az eredeti 3D-s állapotba a következő képkockához
+        glMatrixMode(GL_PROJECTION);
+        glPopMatrix();
+        glMatrixMode(GL_MODELVIEW);
+        glPopMatrix();
+            
+        glBindTexture(GL_TEXTURE_2D,0);
+        glDisable(GL_TEXTURE_2D);
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_LIGHTING);
 }
