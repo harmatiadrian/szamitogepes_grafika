@@ -189,7 +189,10 @@ void update_scene(Scene* scene, vec3 camera_pos, double elapsed_time)
             }
             if (animal->is_sleeping)
             {
-                animal->sleeping_time -= 1.0f * elapsed_time;
+                if (animal->is_on_the_otherside_of_the_anomaly == false)
+                {
+                    animal->sleeping_time -= 1.0f * elapsed_time;
+                }
                 //printf("sleep: %f \n",animal->sleeping_time);
                 continue;
             } 
@@ -226,6 +229,7 @@ void update_scene(Scene* scene, vec3 camera_pos, double elapsed_time)
                         break;
                     }
                 }
+                
 
                 if (!collision) {
                     animal->position.x = next_x;
@@ -247,6 +251,23 @@ void update_scene(Scene* scene, vec3 camera_pos, double elapsed_time)
                     scene->Player.hp = 0;
                 }
                 printf("player hp: %f \n",(scene->Player.hp) *100);
+            }
+            int j;
+            for ( j = 0; j < scene->anomaly_count; j++)
+            {
+                double dx = scene->anomalies[j].position.x - animal->position.x;
+                double dy = scene->anomalies[j].position.y - animal->position.y;
+                double distance = sqrt(dx*dx + dy*dy);
+                //printf("distance from anomaly: %f\n", distance);
+
+                if (distance < .5f && scene->anomalies[j].is_open)
+                {
+                    animal->is_on_the_otherside_of_the_anomaly = true;
+                    animal->position.z = -100.f;
+                    animal->is_sleeping = true;
+                    animal->sleeping_time = 10.0f;
+                    break;
+                }
             }
             //animal->stamina -= 0.1f * elapsed_time;
         }
@@ -274,6 +295,28 @@ void update_scene(Scene* scene, vec3 camera_pos, double elapsed_time)
         scene->Player.position.x = clamp_double(scene->Player.position.x, -50.0, 50.0);
         scene->Player.position.y = clamp_double(scene->Player.position.y, -50.0, 50.0);
 
+    }
+    int i;
+    scene->is_any_animal_awake = false;
+    for ( i = 0; i < scene->animal_count; i++)
+    {
+        Animal* animal = &(scene->animals[i]);
+        if (!animal->is_sleeping)
+        {       
+            scene->is_any_animal_awake = true;
+            break;
+        }
+    }
+
+    scene->is_any_anomaly_open = false;
+    for ( i = 0; i < scene->anomaly_count; i++)
+    {
+        Anomaly* anomaly = &(scene->anomalies[i]);
+        if (anomaly->is_open)
+        {       
+            scene->is_any_anomaly_open = true;
+            break;
+        }
     }
 
     if (scene->Player.hp <= 0)
@@ -406,7 +449,6 @@ void sleep_nerby_creatures(Scene* scene)
         if (animal->distance_from_player < 8.0f) {
             animal->is_sleeping = true;
             animal->sleeping_time = 10.0f;
-            scene->is_any_animal_awake = false;
         }
     }
 }
@@ -421,8 +463,7 @@ void close_nerby_anomalies(Scene* scene)
         double distance = sqrt(dx*dx + dy*dy);
 
         if (distance < 5.0f) {
-            anomaly->is_open = false;
-            scene->is_any_anomaly_open = false;
+            anomaly->is_open = !anomaly->is_open;
         }
     }
 }
@@ -504,9 +545,12 @@ void render_anomaly(const Anomaly* anomaly)
     glRotatef(90.0f,1.0f,0.0f,0.0f);
 
     static float angle = 0;
-    angle +=0.5f;
-    glRotatef(angle,0.0f,0.0f,1.0f);
-
+    if (anomaly->is_open)
+    {
+        angle +=0.5f;
+        glRotatef(angle,0.0f,0.0f,1.0f);
+    }
+    
     glEnable(GL_BLEND);
     glDisable(GL_LIGHTING);
 

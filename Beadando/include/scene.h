@@ -51,6 +51,7 @@ typedef struct {
     float base_speed;
     bool is_running;
     float sleeping_time;
+    bool is_on_the_otherside_of_the_anomaly;
 } Animal;
 
 typedef struct scene
